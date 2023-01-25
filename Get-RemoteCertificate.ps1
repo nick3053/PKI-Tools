@@ -15,6 +15,7 @@
    Name: Get-RemoteCertificate.ps1
    Author: Nick Brülhart
    Created: 25.01.2023
+   To check bad certs I have used https://badssl.com/
 
 #>
 function Get-RemoteCertificate {
@@ -33,16 +34,18 @@ function Get-RemoteCertificate {
     [Net.ServicePointManager]::ServerCertificateValidationCallback = {$true}
 
     #Make use of the .NET web request
-    Write-Host "Trying to reach $url on $port"
+    Write-Host "Trying to reach $url on port $port"
     try{
         $req = [Net.HttpWebRequest]::Create($url)
     } catch {
         Write-Error $_ #If there is an error, this should display it
+        break
     }
 
     #Check and see if $req is still empty
     if(!$req){
         Throw "Unable to connect to $url on port $port"
+        break
     } 
     else #if not, lets move on
     {
@@ -51,12 +54,24 @@ function Get-RemoteCertificate {
             $req.GetResponse() | Out-Null #To retrieve information we need to use the .GetResponse() method first but we don't want this output displayed 
         } catch {
             Write-Host "Exception while checking URL $url"
+            break
         }
 
         #To get SANs wen need the certificate handle extension object and filter for OID 2.5.29.17, (oidref.com/2.5.29.17)
-        #so let's create an instance of the X509Certificate class with the data received 
+        #so let's create an instance of the X509Certificate class with the data received
         $Cert = [Security.Cryptography.X509Certificates.X509Certificate2]$req.ServicePoint.Certificate.Handle
+
+        #we will also safe the full certificate to check the validity
+        $Certificate = [Security.Cryptography.X509Certificates.X509Certificate2]$req.ServicePoint.Certificate
         
+        try{
+            $CertValid = Test-Certificate $Certificate -ErrorAction SilentlyContinue
+
+        } catch {
+            $CertValid = $false
+        }
+        
+
         try {
             #if there are SANs in the certificate, they should now be saved in the $SAN variable
             $SAN = ($Cert.Extensions | Where-Object {$_.Oid.Value -eq "2.5.29.17"}).Format(0) -split ", "
@@ -71,6 +86,7 @@ function Get-RemoteCertificate {
             'Start Date' = $req.ServicePoint.Certificate.GetEffectiveDateString()
             'End Date' = $req.ServicePoint.Certificate.GetExpirationDateString()
             'SANs' = $SAN | Out-String #Converts input object into string
+            'Valid?' =  $CertValid #This checks the validity against the client
 
              }
         $output  #this just outputs our variable, but you could easely reuse this further since we created a PSCustomObject
