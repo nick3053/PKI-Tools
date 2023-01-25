@@ -23,9 +23,9 @@ function Get-RemoteCertificate {
     param
     (
         [parameter(Mandatory=$true)][string]$url,
-        [parameter(Mandatory=$false)]$port = 443 #i have added this since you maybe want to check against LDAPs, WinRM etc.
+        [parameter(Mandatory=$false)]$port = 443 #I have added this since you maybe want to check against LDAPs, WinRM etc.
     )
-    #Set all variables to $null, just in case my ISE wants to hang on to the values between runs....
+    #Set all variables to $null, just in case my IDE wants to hang on to the values between runs....
     $req = $null
     $Cert = $null
     $SAN = $null
@@ -61,7 +61,7 @@ function Get-RemoteCertificate {
         #so let's create an instance of the X509Certificate class with the data received
         $Cert = [Security.Cryptography.X509Certificates.X509Certificate2]$req.ServicePoint.Certificate.Handle
 
-        #we will also safe the full certificate to check the validity
+        #we will also save the full certificate to check the validity
         $Certificate = [Security.Cryptography.X509Certificates.X509Certificate2]$req.ServicePoint.Certificate
         
         try{
